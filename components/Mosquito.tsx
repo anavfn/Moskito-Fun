@@ -10,7 +10,7 @@ const Mosquito: React.FC<MosquitoProps> = ({ mosquito }) => {
 
   return (
     <div
-      className="absolute pointer-events-none will-change-transform"
+      className="absolute pointer-events-none"
       style={{
         left: mosquito.x,
         top: mosquito.y,
@@ -18,42 +18,12 @@ const Mosquito: React.FC<MosquitoProps> = ({ mosquito }) => {
         height: '7rem', // h-28
         // Scale simulates Z-depth. Rotation handles direction.
         transform: `translate(-50%, -50%) rotate(${mosquito.rotation}deg) scale(${mosquito.scale})`,
-        zIndex: Math.floor(mosquito.scale * 10), 
+        zIndex: Math.floor(mosquito.scale * 10) + 10, // Ensure zIndex is always positive and above BG
         transition: 'transform 0.1s linear'
       }}
     >
       <div className="relative w-full h-full flex items-center justify-center">
-        <style>
-          {`
-            @keyframes wingFlutterLeft {
-              0% { transform: scaleY(1) rotate(0deg); }
-              50% { transform: scaleY(0.8) rotate(25deg); }
-              100% { transform: scaleY(1) rotate(0deg); }
-            }
-            @keyframes wingFlutterRight {
-              0% { transform: scaleY(1) rotate(0deg); }
-              50% { transform: scaleY(0.8) rotate(-25deg); }
-              100% { transform: scaleY(1) rotate(0deg); }
-            }
-            @keyframes hoverWobble {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-4px); }
-            }
-            /* Using specific pixel transform origins to ensure wings stay attached */
-            .wing-back { 
-              transform-origin: 80px 45px; 
-              animation: wingFlutterLeft 0.1s infinite linear; 
-            }
-            .wing-front { 
-              transform-origin: 55px 45px; 
-              animation: wingFlutterRight 0.1s infinite linear; 
-            }
-            .mosquito-container { 
-              animation: hoverWobble 0.6s infinite ease-in-out; 
-            }
-          `}
-        </style>
-
+        {/* CSS Animations are now defined in index.html for better performance */}
         <svg width="100%" height="100%" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-xl mosquito-container">
           
           {/* Back Wing - Blue-ish */}

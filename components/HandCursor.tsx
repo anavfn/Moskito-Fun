@@ -41,16 +41,19 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
 
         <g filter="url(#cute-shadow)">
           {isSlapping ? (
-            // Slapping State: Fingers together, dynamic swat shape
+            // Slapping State: Fingers together, nice smooth blob shape
             <path 
-              d="M30 60 
-                 C 20 50, 20 30, 40 25
-                 L 45 15 C 48 5, 58 5, 60 15 
-                 L 62 12 C 65 2, 75 2, 78 12
-                 L 80 15 C 83 5, 93 5, 96 15
-                 L 95 50 
-                 C 95 70, 80 90, 60 95 
-                 C 40 90, 30 70, 30 60 Z"
+              d="M35 80 
+                 C 25 75, 20 50, 40 45
+                 L 45 35 
+                 C 48 20, 58 20, 60 35 
+                 L 62 32 
+                 C 65 15, 75 15, 78 32
+                 L 80 35 
+                 C 83 20, 93 20, 96 35
+                 L 95 60 
+                 C 95 85, 80 100, 60 100 
+                 C 45 100, 40 85, 35 80 Z"
               fill="#FDE047" 
               stroke="#D97706" 
               strokeWidth="4" 
@@ -58,21 +61,21 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
               strokeLinejoin="round"
             />
           ) : (
-            // Idle State: Cute open hand, spread fingers
+            // Idle State: Smoother fingers, fixing the "out a little" glitch
             <path 
-              d="M25 65 
-                 C 15 55, 10 35, 30 40 
-                 L 35 45
-                 L 32 20 C 30 8, 45 8, 48 20 
-                 L 50 45
-                 L 52 10 C 52 -2, 68 -2, 70 10 
-                 L 68 45
-                 L 75 15 C 78 5, 92 5, 90 15 
-                 L 80 48
-                 L 95 35 C 105 30, 110 45, 100 55 
-                 L 85 70
-                 C 80 95, 50 95, 40 85 
-                 C 30 80, 25 65, 25 65 Z"
+              d="M30 70 
+                 C 20 60, 25 45, 35 48 
+                 L 40 50
+                 L 38 25 C 36 12, 50 12, 52 25 
+                 L 54 50
+                 L 56 15 C 56 2, 72 2, 72 15 
+                 L 70 50
+                 L 78 20 C 80 10, 94 10, 92 20 
+                 L 82 55
+                 L 95 45 C 105 40, 110 55, 100 65 
+                 L 85 80
+                 C 75 100, 45 100, 40 90 
+                 C 35 85, 35 75, 30 70 Z"
               fill="#FDE047" 
               stroke="#D97706" 
               strokeWidth="4" 
@@ -81,9 +84,9 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
             />
           )}
           
-          {/* Palm details for cuteness */}
+          {/* Palm details */}
           <path 
-            d="M45 75 Q 60 85, 75 75" 
+            d="M48 80 Q 60 90, 72 80" 
             stroke="#D97706" 
             strokeWidth="3" 
             strokeLinecap="round" 
