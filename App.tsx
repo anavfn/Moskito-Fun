@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import HandCursor from './components/HandCursor';
 import Mosquito from './components/Mosquito';
 import BloodSplat from './components/BloodSplat';
@@ -6,10 +6,15 @@ import ScoreBoard from './components/ScoreBoard';
 import { MosquitoState, BloodSplatData, Position } from './types';
 import { audioManager } from './services/audioManager';
 
+// Optimization: Memoize components that don't change every frame
+const MemoizedScoreBoard = memo(ScoreBoard);
+const MemoizedHandCursor = memo(HandCursor);
+const MemoizedBloodSplat = memo(BloodSplat);
+
 // Game Constants
 const SCREEN_PADDING = 50;
 const BASE_SPEED = 4;
-const FLEE_DISTANCE = 300; // Pixel distance to trigger fleeing
+const FLEE_DISTANCE = 300; 
 const FLEE_SPEED_MULTIPLIER = 3.5;
 const Z_AXIS_SPEED = 0.02;
 
@@ -18,15 +23,13 @@ const App: React.FC = () => {
   const [score, setScore] = useState(0);
   const [isSlapping, setIsSlapping] = useState(false);
   
-  // Game State Refs (High performance mutable state for game loop)
   const mousePos = useRef<Position>({ x: 0, y: 0 });
   const requestRef = useRef<number>(0);
   
-  // We use a ref for the authoritative game state to avoid re-binding event listeners
   const mosquitoRef = useRef<MosquitoState>({
     id: 1,
-    x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400,
-    y: typeof window !== 'undefined' ? window.innerHeight / 2 : 300,
+    x: 400,
+    y: 300,
     rotation: 0,
     scale: 1,
     isDead: false,
@@ -34,18 +37,22 @@ const App: React.FC = () => {
     targetScale: 1
   });
 
-  // React State for rendering (synced from ref)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      mosquitoRef.current.x = window.innerWidth / 2;
+      mosquitoRef.current.y = window.innerHeight / 2;
+    }
+  }, []);
+
   const [renderMosquito, setRenderMosquito] = useState<MosquitoState>(mosquitoRef.current);
   const [splats, setSplats] = useState<BloodSplatData[]>([]);
 
-  // Sound initialization
   const startGame = () => {
     audioManager.init();
     audioManager.resume();
     setGameStarted(true);
   };
 
-  // Track mouse for game logic
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };
@@ -54,11 +61,9 @@ const App: React.FC = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Main Game Loop
   const animate = useCallback(() => {
     if (!gameStarted) return;
 
-    // Update Mosquito Physics
     const prev = mosquitoRef.current;
     
     if (!prev.isDead) {
@@ -66,12 +71,10 @@ const App: React.FC = () => {
       const width = window.innerWidth || 800;
       const height = window.innerHeight || 600;
 
-      // 1. Calculate Distance to Mouse
       const dx = mousePos.current.x - x;
       const dy = mousePos.current.y - y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // 2. AI Behavior: Flee or Wander
       const isFleeing = dist < FLEE_DISTANCE && scale < 2.0;
       
       let speed = BASE_SPEED;
@@ -92,7 +95,6 @@ const App: React.FC = () => {
 
       scale += (targetScale - scale) * Z_AXIS_SPEED;
 
-      // Normalize velocity
       const velMag = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
       if (velMag > speed) {
         velocity.x = (velocity.x / velMag) * speed;
@@ -102,19 +104,15 @@ const App: React.FC = () => {
       x += velocity.x;
       y += velocity.y;
 
-      // Bounce off walls
       if (x < SCREEN_PADDING) velocity.x = Math.abs(velocity.x);
       if (x > width - SCREEN_PADDING) velocity.x = -Math.abs(velocity.x);
       if (y < SCREEN_PADDING) velocity.y = Math.abs(velocity.y);
       if (y > height - SCREEN_PADDING) velocity.y = -Math.abs(velocity.y);
 
-      // Rotation (Face direction + 180 correction for left-facing sprite)
       const angle = (Math.atan2(velocity.y, velocity.x) * (180 / Math.PI)) + 180;
       
-      // Update Audio
       audioManager.updateBuzz(scale, prev.isDead);
 
-      // Update Ref
       mosquitoRef.current = {
         ...prev,
         x,
@@ -126,9 +124,7 @@ const App: React.FC = () => {
       };
     }
 
-    // Sync Ref to State for Render
     setRenderMosquito({...mosquitoRef.current});
-
     requestRef.current = requestAnimationFrame(animate);
   }, [gameStarted]);
 
@@ -141,34 +137,27 @@ const App: React.FC = () => {
     };
   }, [animate, gameStarted]);
 
-  // Click / Slap Handler - Now stable and doesn't depend on changing 'mosquito' state
   const handleSlap = useCallback(() => {
     if (!gameStarted) return;
     
     setIsSlapping(true);
     audioManager.playSlapSound();
 
-    setTimeout(() => setIsSlapping(false), 150);
+    setTimeout(() => setIsSlapping(false), 200);
 
     const mosquito = mosquitoRef.current;
-
-    // Collision Detection
-    const mosquitoRadius = 60 * mosquito.scale; // Slightly generous hitbox
+    const mosquitoRadius = 60 * mosquito.scale;
     const dx = mousePos.current.x - mosquito.x;
     const dy = mousePos.current.y - mosquito.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // Hit Logic
     if (distance < mosquitoRadius && !mosquito.isDead) {
-      // KILL!
       audioManager.playSplatSound();
       setScore(s => s + 1);
       
-      // Mark dead in ref immediately
       mosquitoRef.current.isDead = true;
-      setRenderMosquito({...mosquitoRef.current}); // Force update
+      setRenderMosquito({...mosquitoRef.current});
 
-      // Add Blood Splat
       const newSplat: BloodSplatData = {
         id: Date.now(),
         x: mosquito.x,
@@ -183,7 +172,6 @@ const App: React.FC = () => {
         setSplats(prev => prev.filter(s => s.id !== newSplat.id));
       }, 3000);
 
-      // Respawn Logic
       setTimeout(() => {
         const side = Math.floor(Math.random() * 4);
         let startX = 0, startY = 0;
@@ -197,7 +185,6 @@ const App: React.FC = () => {
             case 3: startX = -50; startY = Math.random() * h; break;
         }
 
-        // Reset Ref
         mosquitoRef.current = {
           id: Date.now(),
           x: startX,
@@ -212,7 +199,6 @@ const App: React.FC = () => {
     }
   }, [gameStarted]);
 
-  // Handle global click
   useEffect(() => {
     window.addEventListener('mousedown', handleSlap);
     return () => window.removeEventListener('mousedown', handleSlap);
@@ -220,11 +206,8 @@ const App: React.FC = () => {
 
   return (
     <div className="relative w-full h-full cursor-none overflow-hidden touch-none select-none">
-      
-      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-orange-50 opacity-50 pointer-events-none"></div>
 
-      {/* Start Screen Overlay */}
       {!gameStarted && (
         <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <button 
@@ -237,16 +220,15 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Game Components */}
-      <ScoreBoard score={score} />
+      <MemoizedScoreBoard score={score} />
       
       {splats.map(splat => (
-        <BloodSplat key={splat.id} data={splat} />
+        <MemoizedBloodSplat key={splat.id} data={splat} />
       ))}
 
       <Mosquito mosquito={renderMosquito} />
 
-      <HandCursor isSlapping={isSlapping} />
+      <MemoizedHandCursor isSlapping={isSlapping} />
 
       {gameStarted && score === 0 && (
         <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 text-gray-400 font-bold text-center pointer-events-none opacity-50">
