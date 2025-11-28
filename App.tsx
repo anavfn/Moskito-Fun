@@ -25,8 +25,8 @@ const App: React.FC = () => {
   // React State for rendering
   const [mosquito, setMosquito] = useState<MosquitoState>({
     id: 1,
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: typeof window !== 'undefined' ? window.innerWidth / 2 : 400,
+    y: typeof window !== 'undefined' ? window.innerHeight / 2 : 300,
     rotation: 0,
     scale: 1,
     isDead: false,
@@ -60,8 +60,8 @@ const App: React.FC = () => {
       if (prev.isDead) return prev;
 
       let { x, y, velocity, scale, targetScale, rotation } = prev;
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const width = window.innerWidth || 800;
+      const height = window.innerHeight || 600;
 
       // 1. Calculate Distance to Mouse (Predator)
       const dx = mousePos.current.x - x;
