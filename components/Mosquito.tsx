@@ -1,24 +1,19 @@
-import React from 'react';
-import { MosquitoState } from '../types';
+import React, { forwardRef } from 'react';
 
-interface MosquitoProps {
-  mosquito: MosquitoState;
-}
-
-const Mosquito: React.FC<MosquitoProps> = ({ mosquito }) => {
-  if (mosquito.isDead) return null;
-
+// We no longer pass the changing state as props to avoid re-renders.
+// Visibility is controlled by the parent mounting/unmounting or via opacity.
+const Mosquito = forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <div
-      className="absolute pointer-events-none"
+      ref={ref}
+      className="absolute pointer-events-none will-change-transform"
       style={{
-        left: mosquito.x,
-        top: mosquito.y,
         width: '7rem', // w-28
         height: '7rem', // h-28
-        transform: `translate(-50%, -50%) rotate(${mosquito.rotation}deg) scale(${mosquito.scale})`,
-        zIndex: Math.floor(mosquito.scale * 10) + 10,
-        transition: 'transform 0.05s linear' // Faster transition for smoother movement
+        // Initial position off-screen or centered, updated immediately by the game loop
+        top: 0,
+        left: 0,
+        transform: 'translate3d(-50%, -50%, 0) scale(0)' 
       }}
     >
       <div className="relative w-full h-full flex items-center justify-center">
@@ -73,6 +68,8 @@ const Mosquito: React.FC<MosquitoProps> = ({ mosquito }) => {
       </div>
     </div>
   );
-};
+});
+
+Mosquito.displayName = 'Mosquito';
 
 export default Mosquito;

@@ -6,7 +6,6 @@ import ScoreBoard from './components/ScoreBoard';
 import { MosquitoState, BloodSplatData, Position } from './types';
 import { audioManager } from './services/audioManager';
 
-// Optimization: Memoize components that don't change every frame
 const MemoizedScoreBoard = memo(ScoreBoard);
 const MemoizedHandCursor = memo(HandCursor);
 const MemoizedBloodSplat = memo(BloodSplat);
@@ -22,11 +21,16 @@ const App: React.FC = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [score, setScore] = useState(0);
   const [isSlapping, setIsSlapping] = useState(false);
+  const [isMosquitoDead, setIsMosquitoDead] = useState(false); // Controls React rendering of mosquito
   
   const mousePos = useRef<Position>({ x: 0, y: 0 });
   const requestRef = useRef<number>(0);
   
-  const mosquitoRef = useRef<MosquitoState>({
+  // Direct DOM ref to avoid re-renders
+  const mosquitoDomRef = useRef<HTMLDivElement>(null);
+
+  // Logic state (separate from render state)
+  const mosquitoLogicRef = useRef<MosquitoState>({
     id: 1,
     x: 400,
     y: 300,
@@ -37,15 +41,14 @@ const App: React.FC = () => {
     targetScale: 1
   });
 
+  const [splats, setSplats] = useState<BloodSplatData[]>([]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      mosquitoRef.current.x = window.innerWidth / 2;
-      mosquitoRef.current.y = window.innerHeight / 2;
+      mosquitoLogicRef.current.x = window.innerWidth / 2;
+      mosquitoLogicRef.current.y = window.innerHeight / 2;
     }
   }, []);
-
-  const [renderMosquito, setRenderMosquito] = useState<MosquitoState>(mosquitoRef.current);
-  const [splats, setSplats] = useState<BloodSplatData[]>([]);
 
   const startGame = () => {
     audioManager.init();
@@ -64,10 +67,11 @@ const App: React.FC = () => {
   const animate = useCallback(() => {
     if (!gameStarted) return;
 
-    const prev = mosquitoRef.current;
+    const mosquito = mosquitoLogicRef.current;
     
-    if (!prev.isDead) {
-      let { x, y, velocity, scale, targetScale } = prev;
+    // Game Loop Logic
+    if (!mosquito.isDead) {
+      let { x, y, velocity, scale, targetScale } = mosquito;
       const width = window.innerWidth || 800;
       const height = window.innerHeight || 600;
 
@@ -95,6 +99,7 @@ const App: React.FC = () => {
 
       scale += (targetScale - scale) * Z_AXIS_SPEED;
 
+      // Normalize speed
       const velMag = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
       if (velMag > speed) {
         velocity.x = (velocity.x / velMag) * speed;
@@ -104,17 +109,20 @@ const App: React.FC = () => {
       x += velocity.x;
       y += velocity.y;
 
+      // Bounce off walls
       if (x < SCREEN_PADDING) velocity.x = Math.abs(velocity.x);
       if (x > width - SCREEN_PADDING) velocity.x = -Math.abs(velocity.x);
       if (y < SCREEN_PADDING) velocity.y = Math.abs(velocity.y);
       if (y > height - SCREEN_PADDING) velocity.y = -Math.abs(velocity.y);
 
+      // Rotation
       const angle = (Math.atan2(velocity.y, velocity.x) * (180 / Math.PI)) + 180;
       
-      audioManager.updateBuzz(scale, prev.isDead);
+      audioManager.updateBuzz(scale, mosquito.isDead);
 
-      mosquitoRef.current = {
-        ...prev,
+      // Update Logic Ref
+      mosquitoLogicRef.current = {
+        ...mosquito,
         x,
         y,
         velocity,
@@ -122,9 +130,15 @@ const App: React.FC = () => {
         targetScale,
         rotation: angle
       };
+
+      // Direct DOM Update (No React Re-render!)
+      if (mosquitoDomRef.current) {
+        const zIndex = Math.floor(scale * 10) + 10;
+        mosquitoDomRef.current.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(${angle}deg) scale(${scale})`;
+        mosquitoDomRef.current.style.zIndex = zIndex.toString();
+      }
     }
 
-    setRenderMosquito({...mosquitoRef.current});
     requestRef.current = requestAnimationFrame(animate);
   }, [gameStarted]);
 
@@ -140,23 +154,29 @@ const App: React.FC = () => {
   const handleSlap = useCallback(() => {
     if (!gameStarted) return;
     
+    // This state update is now cheap because App isn't re-rendering 60fps
     setIsSlapping(true);
     audioManager.playSlapSound();
 
     setTimeout(() => setIsSlapping(false), 200);
 
-    const mosquito = mosquitoRef.current;
-    const mosquitoRadius = 60 * mosquito.scale;
+    const mosquito = mosquitoLogicRef.current;
+    
+    if (mosquito.isDead) return;
+
+    // Hitbox logic
+    const mosquitoRadius = 65 * mosquito.scale; // Adjusted hitbox for 3D effect
     const dx = mousePos.current.x - mosquito.x;
     const dy = mousePos.current.y - mosquito.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < mosquitoRadius && !mosquito.isDead) {
+    if (distance < mosquitoRadius) {
       audioManager.playSplatSound();
       setScore(s => s + 1);
       
-      mosquitoRef.current.isDead = true;
-      setRenderMosquito({...mosquitoRef.current});
+      // Kill Logic
+      mosquitoLogicRef.current.isDead = true;
+      setIsMosquitoDead(true); // Triggers React render to hide mosquito/show splat
 
       const newSplat: BloodSplatData = {
         id: Date.now(),
@@ -168,10 +188,12 @@ const App: React.FC = () => {
       };
       setSplats(prev => [...prev, newSplat]);
 
+      // Cleanup Splat
       setTimeout(() => {
         setSplats(prev => prev.filter(s => s.id !== newSplat.id));
       }, 3000);
 
+      // Respawn Logic
       setTimeout(() => {
         const side = Math.floor(Math.random() * 4);
         let startX = 0, startY = 0;
@@ -185,7 +207,8 @@ const App: React.FC = () => {
             case 3: startX = -50; startY = Math.random() * h; break;
         }
 
-        mosquitoRef.current = {
+        // Reset Logic
+        mosquitoLogicRef.current = {
           id: Date.now(),
           x: startX,
           y: startY,
@@ -195,6 +218,9 @@ const App: React.FC = () => {
           velocity: { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 },
           targetScale: 1
         };
+        
+        // Bring back to life visually
+        setIsMosquitoDead(false);
       }, 1000);
     }
   }, [gameStarted]);
@@ -226,7 +252,8 @@ const App: React.FC = () => {
         <MemoizedBloodSplat key={splat.id} data={splat} />
       ))}
 
-      <Mosquito mosquito={renderMosquito} />
+      {/* Conditionally render Mosquito based on alive state */}
+      {!isMosquitoDead && <Mosquito ref={mosquitoDomRef} />}
 
       <MemoizedHandCursor isSlapping={isSlapping} />
 
