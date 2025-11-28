@@ -11,7 +11,6 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const dx = e.clientX - position.x;
-      // Add a little tilt based on horizontal movement for liveliness
       const targetRotation = Math.max(-15, Math.min(15, dx * 0.8));
       
       setRotation(prev => prev + (targetRotation - prev) * 0.3);
@@ -24,11 +23,10 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
 
   return (
     <div
-      className="fixed pointer-events-none z-[100] transition-transform duration-100 ease-out will-change-transform"
+      className="fixed pointer-events-none z-[100] transition-transform duration-75 ease-out will-change-transform"
       style={{
         left: position.x,
         top: position.y,
-        // Offset translate ensures the "palm" is centered on the mouse
         transform: `translate(-45%, -40%) rotate(${rotation}deg) scale(${isSlapping ? 0.9 : 1})`,
       }}
     >
@@ -41,19 +39,19 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
 
         <g filter="url(#cute-shadow)">
           {isSlapping ? (
-            // Slapping State: Fingers together, nice smooth blob shape
+            // Slapping State: Compact, fingers together
             <path 
-              d="M35 80 
-                 C 25 75, 20 50, 40 45
-                 L 45 35 
-                 C 48 20, 58 20, 60 35 
-                 L 62 32 
-                 C 65 15, 75 15, 78 32
-                 L 80 35 
-                 C 83 20, 93 20, 96 35
+              d="M35 85 
+                 C 25 80, 20 50, 45 40
+                 L 48 30 
+                 C 50 15, 60 15, 62 30 
+                 L 64 28 
+                 C 66 12, 76 12, 78 28
+                 L 80 30 
+                 C 82 15, 92 15, 94 30
                  L 95 60 
                  C 95 85, 80 100, 60 100 
-                 C 45 100, 40 85, 35 80 Z"
+                 C 45 100, 40 90, 35 85 Z"
               fill="#FDE047" 
               stroke="#D97706" 
               strokeWidth="4" 
@@ -61,21 +59,20 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
               strokeLinejoin="round"
             />
           ) : (
-            // Idle State: Smoother fingers, fixing the "out a little" glitch
+            // Idle State: Single clean path for spread fingers to avoid overlaps
             <path 
-              d="M30 70 
-                 C 20 60, 25 45, 35 48 
-                 L 40 50
-                 L 38 25 C 36 12, 50 12, 52 25 
-                 L 54 50
-                 L 56 15 C 56 2, 72 2, 72 15 
-                 L 70 50
-                 L 78 20 C 80 10, 94 10, 92 20 
-                 L 82 55
-                 L 95 45 C 105 40, 110 55, 100 65 
-                 L 85 80
-                 C 75 100, 45 100, 40 90 
-                 C 35 85, 35 75, 30 70 Z"
+              d="M30 75
+                 C 25 65, 30 50, 40 55
+                 L 42 30 C 40 15, 52 15, 54 30
+                 L 56 50
+                 L 58 15 C 58 2, 72 2, 72 15
+                 L 74 50
+                 L 82 20 C 84 8, 96 8, 94 20
+                 L 86 55
+                 L 98 45 C 108 40, 112 55, 102 65
+                 L 85 85
+                 C 75 105, 45 105, 40 95
+                 C 35 90, 35 80, 30 75 Z"
               fill="#FDE047" 
               stroke="#D97706" 
               strokeWidth="4" 
@@ -86,7 +83,7 @@ const HandCursor: React.FC<HandCursorProps> = ({ isSlapping }) => {
           
           {/* Palm details */}
           <path 
-            d="M48 80 Q 60 90, 72 80" 
+            d="M50 85 Q 60 95, 70 85" 
             stroke="#D97706" 
             strokeWidth="3" 
             strokeLinecap="round" 
