@@ -116,11 +116,8 @@ const App: React.FC = () => {
       if (y > height - SCREEN_PADDING) velocity.y = -Math.abs(velocity.y);
 
       // Calculate Rotation (face movement direction)
-      const angle = Math.atan2(velocity.y, velocity.x) * (180 / Math.PI);
-      // Correction for new sprite orientation (sprite faces leftish by default? No, usually right)
-      // The new SVG is drawn horizontally roughly centered.
-      // Let's adjust rotation offset if needed. SVG nose points left/down slightly.
-      // Let's assume standard rotation (0deg = right).
+      // The sprite faces LEFT by default, so we add 180 degrees to face the velocity vector
+      const angle = (Math.atan2(velocity.y, velocity.x) * (180 / Math.PI)) + 180;
       
       // Update Audio
       audioManager.updateBuzz(scale, prev.isDead);
